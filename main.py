@@ -6,10 +6,18 @@ from math import sin, cos, pi
 from PyQt6.QtGui import QColor, QPainter, QPixmap, QPen, QIcon
 from Ui_file import Ui_WindowMain
 
+WIN_SIZE = 900, 520
+CANVAS_SIZE = 500, 500
+# RANGE_BORDERS = -12500, 12501 - Реальная граница
+RANGE_BORDERS = -12450, 12450
+EXP = 1000
+COLOR_BANK = [QColor('red'), QColor('blue'), QColor('green'), QColor('purple'), QColor('magenta')]
+POINT_DIF = 20
 
-def getCoords(func: str, rng: range, exp: int) -> tuple[list[tuple[float, float] | None], bool]:
+
+def getCoords(func: str, rng: range, exp: int) -> tuple[list[tuple[float, float] | None], dict[str, bool]]:
     coords = []
-    good = False
+    log = {"hasPoints": False, "hasPointsInRange": False}
     if "^" in func:
         func = func.replace("^", "**")
     for x in rng:
@@ -22,9 +30,11 @@ def getCoords(func: str, rng: range, exp: int) -> tuple[list[tuple[float, float]
             print(f"---- {e}\n")
             coords.append(None)
             continue
+        if 0 <= CANVAS_SIZE[1] // 2 - y * POINT_DIF <= CANVAS_SIZE[1]:
+            log["hasPointsInRange"] = True
         coords.append((float(x), float(y)))
-        good = True
-    return coords, good
+        log["hasPoints"] = True
+    return coords, log
 
 
 class MainWindow(QMainWindow, Ui_WindowMain):
@@ -34,12 +44,11 @@ class MainWindow(QMainWindow, Ui_WindowMain):
         self.setup()
 
     def setup(self):
-        self.setFixedSize(900, 520)
+        self.setFixedSize(*WIN_SIZE)
         self.setWindowIcon(QIcon("./res/icon.png"))
-
-        self.funcBank = dict()
-        self.colorBank = [QColor('red'), QColor('black'), QColor('blue'),
-                          QColor('green'), QColor('purple'), QColor('magenta')]
+        self.XFuncData = getCoords("0", range(*RANGE_BORDERS), EXP)[0]
+        self.funcBank = dict()  # {funcName: (coords, color)}
+        self.colorBank = COLOR_BANK.copy()
         self.funcColorLook = self.colorBank.copy()
         self.pointWidth = 2
         self.painter = QPainter()
@@ -48,8 +57,6 @@ class MainWindow(QMainWindow, Ui_WindowMain):
         self.pen.setWidth(self.pointWidth)
         self.clear()
         self.setupBack()
-        # self.plotFunc("x^2+2*x-1")
-        # self.plotFunc("x + 3")
 
     def setupBack(self):
         self.btnPlot.clicked.connect(self.plotButt)
@@ -57,53 +64,40 @@ class MainWindow(QMainWindow, Ui_WindowMain):
 
     def plotButt(self):
         func = self.funcEdit.text().strip()
-        if func and func not in self.funcBank.keys():
-            coords = self.plotFunc(func)
-            if coords is None:
-                self.funcEdit.setText("Function failed!")
+        if (func and func not in self.funcBank.keys() and
+                func != "Function failed!" and func != "Function failed! Out of range!"):
+            coords, log = getCoords(func, range(*RANGE_BORDERS), EXP)
+            if not log["hasPoints"]:
+                self.funcEdit.setText("Function failed! Check the logs!")
                 return
-            self.funcBank[func] = coords
+            if not log["hasPointsInRange"]:
+                self.funcEdit.setText("Function failed! Out of range!")
+                return
+            if len(self.funcBank.keys()) < len(COLOR_BANK):  # Выбор цвета функции
+                color = choice(self.funcColorLook)
+                self.funcColorLook.remove(color)
+            else:
+                color = choice(self.colorBank)
+            self.plotFunc(coords, color)
+            self.funcBank[func] = coords, color
             if self.funcList.item(0).text() == "Empty!":
                 self.funcList.clear()
             self.funcList.addItem("y = " + func)
 
-    def plotFunc(self, func: str) -> list[tuple[float, float] | None] | None:
-        # for p in getCoords(func, range(-250, 251), 10):
-        #     self.drawPoint(self.refCoords(p))
-        coords, flag = getCoords(func, range(-12500, 12501), 1000)
-        if not flag:
-            return None
-
-        output = []
-        temp = []
-        for item in coords:  # Разделение функции на 'регионы'
-            if item is None:
-                output.append(temp)
-                temp = []
-            else:
-                temp.append(item)
-        if temp:
-            output.append(temp)
-
+    def plotFunc(self, coords: list[tuple[float, float] | None], color: QColor):
         canvas = self.canvasL.pixmap()
         self.painter.begin(canvas)
-        if len(self.funcBank.keys()) < 6:  # Выбор цвета функции
-            color = choice(self.funcColorLook)
-            self.funcColorLook.remove(color)
-        else:
-            color = choice(self.colorBank)
         self.pen.setColor(color)
         self.painter.setPen(self.pen)
-
-        for p_list in output:
-            self.painter.drawLines(list(map(lambda p: QPointF(*self.refCoords(p)), p_list)))
-        self.painter.end()
+        for p in coords:
+            if p is None:
+                continue
+            self.drawPoint(p)
         self.canvasL.setPixmap(canvas)
-        print("Ended drawing func:", func)
-        return coords.copy()
+        self.painter.end()
 
     def clear(self):
-        canvas = QPixmap(500, 500)
+        canvas = QPixmap(*CANVAS_SIZE)
         canvas.fill(QColor('white'))
         self.canvasL.setPixmap(canvas)
         self.funcList.clear()
@@ -112,16 +106,17 @@ class MainWindow(QMainWindow, Ui_WindowMain):
         self.funcColorLook = self.colorBank.copy()
         self.funcEdit.clear()
 
+    def setGraph(self):
+        color = QColor("black")
+        coords = self.XFuncData
+        self.plotFunc(coords, color)
+        self.funcBank["Xgraph"] = coords, color
+
     def drawPoint(self, coords: tuple[float, float]):
-        canvas = self.canvasL.pixmap()
-        self.painter.begin(canvas)
-        self.painter.setPen(self.pen)
-        self.painter.drawPoint(QPointF(*coords))
-        self.painter.end()
-        self.canvasL.setPixmap(canvas)
+        self.painter.drawPoint(QPointF(*self.refCoords(coords)))
 
     def refCoords(self, coords: tuple[float, float]) -> tuple[float, float]:
-        coords = (self.canvasL.width() // 2 + coords[0] * 20, self.canvasL.height() // 2 - coords[1] * 20)
+        coords = (self.canvasL.width() // 2 + coords[0] * POINT_DIF, self.canvasL.height() // 2 - coords[1] * POINT_DIF)
         return coords
 
 
