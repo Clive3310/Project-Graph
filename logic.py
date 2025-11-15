@@ -1,4 +1,5 @@
 from PyQt6.QtGui import QColor
+import json
 from math import sin, cos
 
 WIN_SIZE = 915, 540
@@ -14,6 +15,8 @@ POINT_WIDTH = 2
 CHECKS_SIZE = 2
 PRESX = 4
 PRESY = 4
+MIN_PASSWORD_LEN, MAX_PASSWORD_LEN = 5, 30
+MIN_USERNAME_LEN, MAX_USERNAME_LEN = 5, 30
 
 
 def getCoords(func: str, rng: range, exp: int) -> tuple[list[tuple[float, float]], dict]:
@@ -40,4 +43,33 @@ def getCoords(func: str, rng: range, exp: int) -> tuple[list[tuple[float, float]
 
     return coords, log
 
-# print(getCoords('sin(x)', range(*RANGE_BORDERS), EXP))
+
+def saveToJson(dictionary: dict, filename: str):
+    with open(f"res/{filename}.json", 'w') as outfile:
+        json.dump(dictionary, outfile)
+
+
+def loadFromJson(filename: str):
+    with open(filename, 'r') as json_file:
+        dictionary = json.load(json_file)
+        return dictionary
+
+
+def checkPassword(password: str, re_password: str):
+    if len(password) < MIN_PASSWORD_LEN:
+        return "Пароль слишком короткий!"
+    if len(password) > MAX_PASSWORD_LEN:
+        return "Пароль слишком длинный!"
+    if password != re_password:
+        return "Пароли не совпадают!"
+    return "good"
+
+
+def checkUsername(username: str):
+    if len(username) < MIN_USERNAME_LEN:
+        return "Имя слишком короткое!"
+    if len(username) > MAX_USERNAME_LEN:
+        return "Имя слишком длинное!"
+    if not username.replace(" ", "").isalpha():
+        return "Имя должно содержать только буквы!"
+    return "good"

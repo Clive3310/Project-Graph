@@ -1,12 +1,13 @@
 import sys
 from PyQt6.QtWidgets import QApplication
+
 from controller import Controller
 
 
 def main(argv):
     app = QApplication(argv)
     cont = Controller()
-    cont.startMain()
+    cont.startReg()
     sys.exit(app.exec())
 
 
