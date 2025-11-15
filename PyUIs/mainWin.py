@@ -1,4 +1,5 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6.QtWidgets import QMainWindow
 
 
 class Ui_windowMain(object):
@@ -74,3 +75,13 @@ class Ui_windowMain(object):
         self.funcList.setSortingEnabled(False)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.plotTab), _translate("windowMain", "Plotting"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.saveTab), _translate("windowMain", "Saving"))
+
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    windowMain = QtWidgets.QWidget()
+    ui = Ui_windowMain()
+    ui.setupUi(windowMain)
+    windowMain.show()
+    sys.exit(app.exec())
