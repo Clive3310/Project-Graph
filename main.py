@@ -7,7 +7,7 @@ from controller import Controller
 def main(argv):
     app = QApplication(argv)
     cont = Controller()
-    cont.startReg()
+    cont.startLogIn()
     sys.exit(app.exec())
 
 

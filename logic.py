@@ -1,6 +1,6 @@
 from PyQt6.QtGui import QColor
 import json
-from math import sin, cos
+from math import sin, cos, pi
 
 WIN_SIZE = 915, 540
 CANVAS_SIZE = 500, 500
@@ -17,6 +17,7 @@ PRESX = 4
 PRESY = 4
 MIN_PASSWORD_LEN, MAX_PASSWORD_LEN = 5, 30
 MIN_USERNAME_LEN, MAX_USERNAME_LEN = 5, 30
+IMGLABELSIZE = 128, 128
 
 
 def getCoords(func: str, rng: range, exp: int) -> tuple[list[tuple[float, float]], dict]:

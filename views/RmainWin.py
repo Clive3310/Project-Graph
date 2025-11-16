@@ -6,6 +6,6 @@ class MainWin(QMainWindow, Ui_windowMain):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.setWindowTitle("Graphic Calculator")
-        self.tabWidget.setTabText(0, "📈 Plotting")
-        self.tabWidget.setTabText(1, "💾 Saving")
+        self.setWindowTitle("Графический калькулятор")
+        self.tabWidget.setTabText(0, "📈 Граф")
+        self.tabWidget.setTabText(1, "💾 Сохранение")

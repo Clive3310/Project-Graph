@@ -117,9 +117,9 @@
     <widget class="QLineEdit" name="jsonFileNameEdit">
      <property name="geometry">
       <rect>
-       <x>90</x>
+       <x>130</x>
        <y>10</y>
-       <width>291</width>
+       <width>251</width>
        <height>41</height>
       </rect>
      </property>
@@ -188,7 +188,7 @@
       <rect>
        <x>10</x>
        <y>10</y>
-       <width>111</width>
+       <width>121</width>
        <height>40</height>
       </rect>
      </property>
@@ -200,7 +200,7 @@
       </font>
      </property>
      <property name="text">
-      <string>File name</string>
+      <string>Название файла</string>
      </property>
     </widget>
    </widget>
@@ -224,7 +224,7 @@
      <x>10</x>
      <y>199</y>
      <width>381</width>
-     <height>331</height>
+     <height>281</height>
     </rect>
    </property>
    <property name="font">
@@ -239,6 +239,32 @@
    </property>
    <property name="sortingEnabled">
     <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="prophileButtMain">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>490</y>
+     <width>181</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Профиль</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="variablesButt">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>490</y>
+     <width>181</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Функции и переменные</string>
    </property>
   </widget>
  </widget>

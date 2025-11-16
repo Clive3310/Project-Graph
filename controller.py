@@ -1,9 +1,11 @@
-from PyQt6.QtWidgets import QApplication, QMessageBox, QFileDialog, QMainWindow, QLabel
+from PyQt6.QtWidgets import QApplication, QMessageBox, QFileDialog, QMainWindow
 import sys
-from db_tools import addUser, checkUserPas
+from PIL import Image
+from db_tools import addUser, checkUserPas, deleteUser
 from views.RmainWin import MainWin
 from views.RregWin import RegWin
 from views.RlogWin import LogWin
+from views.RproWin import ProWin
 from logic import *
 from PyQt6.QtGui import QIcon, QPainter, QPixmap, QPen, QColor
 from PyQt6.QtCore import QPointF
@@ -21,6 +23,7 @@ class Controller:
     def __init__(self):
         self.win = QMainWindow()
         self.username = None
+        self.setupStarting()
 
     def startMain(self):
         if self.win:
@@ -36,10 +39,56 @@ class Controller:
         self.setupReg()
         self.win.show()
 
+    def startPro(self):
+        if self.win:
+            self.win.close()
+        self.win = ProWin()
+        self.setupPro()
+        self.win.show()
+
+    def setupPro(self):
+        self.win.setFixedSize(self.win.size())
+
+        pm = QPixmap(f"./res/{self.username}.png")
+        if pm.isNull():
+            print("User's image not found!")
+            pm = QPixmap("./res/baseImg.png")
+        self.win.imgLabel.setPixmap(pm)
+        if self.username is None:
+            user = "BaseName"
+        else:
+            user = self.username
+        self.win.nameLabel.setText(user)
+        self.win.backToMainButt.clicked.connect(self.startMain)
+        self.win.leaveProphileButt.clicked.connect(self.startLogIn)
+        self.win.deleteProphileButt.clicked.connect(self.deleteProSelf)
+
+    def deleteProSelf(self):
+        ans = QMessageBox.question(self.win, "Подтверждение", "Вы уверены что хотите безвозвратно удалить аккаунт?",
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+        if ans == QMessageBox.StandardButton.No:
+            return
+
+        try:
+            deleteUser(self.username)
+        except Exception as e:
+            print(e)
+            return
+
+        self.startLogIn()
+
     def setupReg(self):
         self.win.setFixedSize(self.win.size())
         self.win.registrateButt.clicked.connect(self.registrate)
         self.win.logInLinkButt.clicked.connect(self.startLogIn)
+        self.win.chooseImgPathButt.clicked.connect(self.chooseImg)
+
+    def chooseImg(self):
+        filepath = QFileDialog.getOpenFileName(self.win, "Выберите файл", filter="Images (*.png)")[0]
+
+        if filepath:
+            self.win.imgPathEdit.setText(filepath)
 
     def startLogIn(self):
         if self.win:
@@ -71,6 +120,7 @@ class Controller:
         username = self.win.nameEdit.text().strip()
         password = self.win.passwordEdit.text().strip()
         re_password = self.win.passwordConfirm.text().strip()
+        img_path = self.win.imgPathEdit.text().strip()
 
         ncheck = checkUsername(username)
         if ncheck != "good":
@@ -80,6 +130,17 @@ class Controller:
         if pcheck != "good":
             self.win.errorLabel.setText(pcheck)
             return
+
+        if img_path:
+            try:
+                img = Image.open(img_path)
+            except Exception:
+                self.win.errorLabel.setText("Не удалось загрузить картинку!")
+                return
+            if img.size != IMGLABELSIZE:
+                self.win.errorLabel.setText("Картинка должна быть 128x128")
+                return
+            img.save(f"./res/{username}.{img_path.strip().split('.')[-1]}")
         self.win.errorLabel.setText("")
 
         error = addUser(username, password)
@@ -89,11 +150,16 @@ class Controller:
         self.win.nameEdit.clear()
         self.win.passwordEdit.clear()
         self.win.passwordConfirm.clear()
+        self.win.imgPathEdit.clear()
         self.win.errorLabel.setText("Профиль зарегистрирован!")
 
     def setupMain(self):
         self.win.setFixedSize(*WIN_SIZE)
         self.win.setWindowIcon(QIcon("icon.png"))
+        self.clear()
+        self.setupMainBack()
+
+    def setupStarting(self):
         self.XFuncData = getCoords("0", range(*RANGE_BORDERS), EXP)[0], QColor("black").rgb()
         self.YFuncData = [(0.0, round(x / EXP, PRESY)) for x in range(*RANGE_BORDERS)], QColor("black").rgb()
         self.funcBank = dict()  # {funcName: (coords, color)}
@@ -104,14 +170,13 @@ class Controller:
         self.painter.setRenderHint(QPainter.RenderHint.Antialiasing)  # Вроде с этим чуть ровнее
         self.pen = QPen()
         self.pen.setWidth(self.pointWidth)
-        self.clear()
-        self.setupMainBack()
 
     def setupMainBack(self):
         self.win.btnPlot.clicked.connect(self.plotButt)
         self.win.btnClear.clicked.connect(self.clear)
         self.win.saveJSONb.clicked.connect(self.saveToJson)
         self.win.loadJSONb.clicked.connect(self.loadFromJson)
+        self.win.prophileButtMain.clicked.connect(self.startPro)
 
     def saveToJson(self):
         filename = self.win.jsonFileNameEdit.text().strip()
@@ -125,7 +190,7 @@ class Controller:
             saveToJson(td, filename)
 
     def loadFromJson(self):
-        filename = QFileDialog.getOpenFileName(self.win, "Select a File", directory="./res",
+        filename = QFileDialog.getOpenFileName(self.win, "Выберите файл", directory="./res",
                                                filter="JSON (*.json);;")[0]
         if filename:
             self.clear()

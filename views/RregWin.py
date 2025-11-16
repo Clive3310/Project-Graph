@@ -6,5 +6,5 @@ class RegWin(QMainWindow, Ui_regWin):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.setWindowTitle("Registration")
+        self.setWindowTitle("Регистрация")
         self.errorLabel.setText("")

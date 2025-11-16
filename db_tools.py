@@ -40,8 +40,10 @@ CREATEDATATABLE = """CREATE TABLE IF NOT EXISTS data
                          NOT
                          NULL
                      );"""
+
 INSERTUSER = """INSERT INTO users (username, password)
                 VALUES (?, ?)"""
+INSERTIMAGE = """INSERT INTO data (id, username, password)"""
 DELETEUSER = """DELETE
                 FROM users
                 WHERE username = ?"""
