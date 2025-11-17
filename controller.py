@@ -1,11 +1,15 @@
 from PyQt6.QtWidgets import QApplication, QMessageBox, QFileDialog, QMainWindow
 import sys
+import os
 from PIL import Image
-from db_tools import addUser, checkUserPas, deleteUser
+from db_tools import addUser, checkUserPas, deleteUser, getUserVF, updateData
 from views.RmainWin import MainWin
 from views.RregWin import RegWin
 from views.RlogWin import LogWin
 from views.RproWin import ProWin
+from views.RvarsWin import VarWin
+from views.RcreateFuncForm import FuncForm
+from views.RcreateVarForm import VarForm
 from logic import *
 from PyQt6.QtGui import QIcon, QPainter, QPixmap, QPen, QColor
 from PyQt6.QtCore import QPointF
@@ -23,7 +27,10 @@ class Controller:
     def __init__(self):
         self.win = QMainWindow()
         self.username = None
+        self.vars = dict()
+        self.funcs = dict()
         self.setupStarting()
+        self.updateSelfData()
 
     def startMain(self):
         if self.win:
@@ -48,11 +55,11 @@ class Controller:
 
     def setupPro(self):
         self.win.setFixedSize(self.win.size())
-
+        self.win.setWindowIcon(QIcon('res/imgs/pro_icon.png'))
         pm = QPixmap(f"./res/{self.username}.png")
         if pm.isNull():
             print("User's image not found!")
-            pm = QPixmap("./res/baseImg.png")
+            pm = QPixmap("res/imgs/baseImg.png")
         self.win.imgLabel.setPixmap(pm)
         if self.username is None:
             user = "BaseName"
@@ -65,7 +72,7 @@ class Controller:
 
     def deleteProSelf(self):
         ans = QMessageBox.question(self.win, "Подтверждение", "Вы уверены что хотите безвозвратно удалить аккаунт?",
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
         if ans == QMessageBox.StandardButton.No:
             return
@@ -75,11 +82,15 @@ class Controller:
         except Exception as e:
             print(e)
             return
-
+        try:
+            os.remove(f"./res/{self.username}.png")
+        except Exception as e:
+            print("Не удалось удалить картинку: ", e)
         self.startLogIn()
 
     def setupReg(self):
         self.win.setFixedSize(self.win.size())
+        self.win.setWindowIcon(QIcon('res/imgs/reg_icon.png'))
         self.win.registrateButt.clicked.connect(self.registrate)
         self.win.logInLinkButt.clicked.connect(self.startLogIn)
         self.win.chooseImgPathButt.clicked.connect(self.chooseImg)
@@ -94,11 +105,12 @@ class Controller:
         if self.win:
             self.win.close()
         self.win = LogWin()
-        self.setupLog()
+        self.setupLogIn()
         self.win.show()
 
-    def setupLog(self):
+    def setupLogIn(self):
         self.win.setFixedSize(self.win.size())
+        self.win.setWindowIcon(QIcon('res/imgs/log_icon.png'))
         self.win.logButt.clicked.connect(self.logIn)
         self.win.regLinkButt.clicked.connect(self.startReg)
 
@@ -155,7 +167,7 @@ class Controller:
 
     def setupMain(self):
         self.win.setFixedSize(*WIN_SIZE)
-        self.win.setWindowIcon(QIcon("icon.png"))
+        self.win.setWindowIcon(QIcon("res/imgs/main_icon.png"))
         self.clear()
         self.setupMainBack()
 
@@ -177,6 +189,137 @@ class Controller:
         self.win.saveJSONb.clicked.connect(self.saveToJson)
         self.win.loadJSONb.clicked.connect(self.loadFromJson)
         self.win.prophileButtMain.clicked.connect(self.startPro)
+        self.win.variablesButt.clicked.connect(self.startVars)
+
+    def startVars(self):
+        if self.win:
+            self.win.close()
+        self.win = VarWin()
+        self.setupVar()
+        self.win.show()
+
+    def setupVar(self):
+        self.win.setFixedSize(self.win.size())
+        self.win.setWindowIcon(QIcon('res/imgs/vars_icon.png'))
+        self.win.leaveToMainButt.clicked.connect(self.startMain)
+
+        self.win.addFuncButt.clicked.connect(self.startFuncForm)
+        self.win.addVarButt.clicked.connect(self.startVarForm)
+        self.win.delVarButt.clicked.connect(self.deleteVar)
+        self.win.delFuncButt.clicked.connect(self.deleteFunc)
+
+        self.updateSelfData()
+
+        for key, value in self.vars.items():
+            self.win.varsList.addItem(f"{key} = {value}")
+
+        for key, value in self.funcs.items():
+            self.win.funcsList.addItem(f"{key} = {value}")
+
+    def deleteVar(self):
+        if not self.win.varsList.count():
+            return
+        item = self.win.varsList.currentItem().text()
+        name = item.split(" = ")[0]
+        ans = QMessageBox.question(self.win, "Подтверждение",
+                                   f"Вы уверены что хотите удалить переменную '{name}'?",
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+        if ans == QMessageBox.StandardButton.No:
+            return
+
+        self.vars.pop(name, None)
+        self.updateDBData()
+        self.startVars()
+
+    def deleteFunc(self):
+        if not self.win.funcsList.count():
+            return
+        item = self.win.funcsList.currentItem()
+        if item is None:
+            return
+        item = item.text()
+        name = item.split(" = ")[0]
+        ans = QMessageBox.question(self.win, "Подтверждение",
+                                   f"Вы уверены что хотите удалить функцию '{name}'?",
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+
+        if ans == QMessageBox.StandardButton.No:
+            return
+
+        self.funcs.pop(name, None)
+        self.updateDBData()
+        self.startVars()
+
+    def updateSelfData(self):
+        varbs, funcs = getUserVF(self.username)
+        self.vars, self.funcs = refactorVarsFrom(varbs), refactorFuncsFrom(funcs)
+
+    def updateDBData(self):
+        updateData(self.username, self.vars, self.funcs)
+
+    def startVarForm(self):
+        if self.win:
+            self.win.close()
+        self.win = VarForm()
+        self.setupVarForm()
+        self.win.show()
+
+    def setupVarForm(self):
+        self.win.cancelButt.clicked.connect(self.startVars)
+        self.win.setWindowIcon(QIcon('res/imgs/main_icon.png'))
+
+        self.win.affButt.clicked.connect(self.addVar)
+
+    def addVar(self):
+        name, var = self.win.varNameEdit.text(), self.win.varEdit.text()
+        if name and var:
+            if not var.isdigit():
+                self.win.errorLabel.setText("Переменная должна состоять только из цифр!")
+                return
+            if name == "x":
+                self.win.errorLabel.setText("Название переменной не может быть x!")
+                return
+            if name in self.vars.keys() or name in self.funcs.keys():
+                self.win.errorLabel.setText("Это название занято!")
+                return
+            self.vars[name] = var
+            self.updateDBData()
+            self.startVars()
+
+    def startFuncForm(self):
+        if self.win:
+            self.win.close()
+        self.win = FuncForm()
+        self.setupFuncForm()
+        self.win.show()
+
+    def setupFuncForm(self):
+        self.win.cancelButt.clicked.connect(self.startVars)
+        self.win.setWindowIcon(QIcon('res/imgs/main_icon.png'))
+
+        self.win.affButt.clicked.connect(self.addFunc)
+
+    def addFunc(self):
+        name, func = self.win.funcNameEdit.text(), self.win.funcEdit.text()
+        if name and func:
+            if "x" not in func:
+                self.win.errorLabel.setText("Функция должна содержать x!")
+                return
+            if name == "x":
+                self.win.errorLabel.setText("Название функции не может быть x!")
+                return
+            if name in self.vars.keys() or name in self.funcs.keys():
+                self.win.errorLabel.setText("Это название занято!")
+                return
+            self.funcs[name] = func
+            self.updateDBData()
+            self.startVars()
+
+    def showData(self):
+        varbs, funcs = getUserVF(self.username)
+        print(varbs + "-------" + funcs)
+        print(refactorVarsTo(self.vars) + "-------" + refactorFuncsTo(self.funcs) + "\n")
 
     def saveToJson(self):
         filename = self.win.jsonFileNameEdit.text().strip()

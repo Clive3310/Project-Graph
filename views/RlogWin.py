@@ -6,5 +6,5 @@ class LogWin(QMainWindow, Ui_logWin):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.setWindowTitle("Logging")
+        self.setWindowTitle("Вход")
         self.errorLabel.setText("")

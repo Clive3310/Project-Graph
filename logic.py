@@ -74,3 +74,36 @@ def checkUsername(username: str):
     if not username.replace(" ", "").isalpha():
         return "Имя должно содержать только буквы!"
     return "good"
+
+
+def refactorVarsTo(varbs: dict[str, str]) -> str:
+    ans = ";".join([str(key) + ":" + str(value) for key, value in varbs.items()])
+    return ans
+
+
+def refactorFuncsTo(funcs: dict[str, str]) -> str:
+    ans = ";".join([str(key) + ":" + str(value) for key, value in funcs.items()])
+    return ans
+
+
+def refactorVarsFrom(data: str) -> dict[str, str]:
+    ans = dict()
+    if data:
+        for dt in data.split(";"):
+            key, value = dt.split(":")
+            ans[key] = value
+    return ans
+
+
+def refactorFuncsFrom(data: str) -> dict[str, str]:
+    ans = dict()
+    if data:
+        for dt in data.split(";"):
+            key, value = dt.split(":")
+            ans[key] = value
+    return ans
+
+# a = {"a": '12', "b": "23.5"}
+# b = "a:12;b:23.5"
+# print(refactorVarsFrom(b))
+# vs = {"func": lambda x: eval(a.replace("x", str(x))), "pi": pi} - как работать с функциями
