@@ -20,16 +20,19 @@ MIN_USERNAME_LEN, MAX_USERNAME_LEN = 5, 30
 IMGLABELSIZE = 128, 128
 
 
-def getCoords(func: str, rng: range, exp: int) -> tuple[list[tuple[float, float]], dict]:
+def getCoords(func: str, rng: range, exp: int, env: dict) -> tuple[list[tuple[float, float]], dict]:
     coords = []
+    env_copy = env.copy()
+    env_copy.update({"sin": lambda v: sin(v), "cos": lambda v: cos(v), "pi": pi})
     log = {"hasPoints": False, "hasPointsInRange": False, "fatalError": False}
     if "^" in func:
         func = func.replace("^", "**")
     for x in rng:
         x = round(x / exp, PRESX)
         y = 0.0
+        env_copy.update({"x": x})
         try:
-            y = round(eval(func), PRESY)
+            y = round(eval(func, env_copy), PRESY)
         except ZeroDivisionError as e:
             print(f"Function '{func}' dropped with: {x, y}")
             print(f"---- {e}\n")
@@ -45,15 +48,15 @@ def getCoords(func: str, rng: range, exp: int) -> tuple[list[tuple[float, float]
     return coords, log
 
 
-def saveToJson(dictionary: dict, filename: str):
+def saveToJson(data: dict, filename: str):
     with open(f"res/{filename}.json", 'w') as outfile:
-        json.dump(dictionary, outfile)
+        json.dump(data, outfile)
 
 
 def loadFromJson(filename: str):
     with open(filename, 'r') as json_file:
-        dictionary = json.load(json_file)
-        return dictionary
+        dt = json.load(json_file)
+        return dt
 
 
 def checkPassword(password: str, re_password: str):
@@ -103,7 +106,22 @@ def refactorFuncsFrom(data: str) -> dict[str, str]:
             ans[key] = value
     return ans
 
-# a = {"a": '12', "b": "23.5"}
-# b = "a:12;b:23.5"
-# print(refactorVarsFrom(b))
+
+def refactorDataForEval(varbs: dict[str, str], funcs: dict[str, str]) -> dict:
+    ans = dict()
+    for key, value in varbs.items():
+        try:
+            ans[key] = eval(value)
+        except Exception as e:
+            print("Bad variable!")
+
+    for key, value in funcs.items():
+        try:
+            ans[key] = lambda x=value, func=value: eval(func.replace("x", str(x)))
+        except Exception as e:
+            print("Something went wrong, idk!")
+    return ans
+
+# a = {"a": 'x + 3', "b": "x + 4"}
+# print(eval("a(2) + 3", refactorDataForEval(dict(), a)))
 # vs = {"func": lambda x: eval(a.replace("x", str(x))), "pi": pi} - как работать с функциями

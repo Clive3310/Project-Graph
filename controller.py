@@ -30,7 +30,6 @@ class Controller:
         self.vars = dict()
         self.funcs = dict()
         self.setupStarting()
-        self.updateSelfData()
 
     def startMain(self):
         if self.win:
@@ -172,14 +171,14 @@ class Controller:
         self.setupMainBack()
 
     def setupStarting(self):
-        self.XFuncData = getCoords("0", range(*RANGE_BORDERS), EXP)[0], QColor("black").rgb()
+        self.XFuncData = getCoords("0", range(*RANGE_BORDERS), EXP,
+                                   refactorDataForEval(self.vars, self.funcs))[0], QColor("black").rgb()
         self.YFuncData = [(0.0, round(x / EXP, PRESY)) for x in range(*RANGE_BORDERS)], QColor("black").rgb()
         self.funcBank = dict()  # {funcName: (coords, color)}
         self.colorBank = COLOR_BANK.copy()
         self.funcColorLook = self.colorBank.copy()
         self.pointWidth = POINT_WIDTH
         self.painter = QPainter()
-        self.painter.setRenderHint(QPainter.RenderHint.Antialiasing)  # Вроде с этим чуть ровнее
         self.pen = QPen()
         self.pen.setWidth(self.pointWidth)
 
@@ -274,9 +273,6 @@ class Controller:
     def addVar(self):
         name, var = self.win.varNameEdit.text(), self.win.varEdit.text()
         if name and var:
-            if not var.isdigit():
-                self.win.errorLabel.setText("Переменная должна состоять только из цифр!")
-                return
             if name == "x":
                 self.win.errorLabel.setText("Название переменной не может быть x!")
                 return
@@ -359,7 +355,7 @@ class Controller:
     def plotButt(self):
         func = self.win.funcEdit.text().strip()
         if func and func not in self.funcBank.keys():
-            coords, log = getCoords(func, range(*RANGE_BORDERS), EXP)
+            coords, log = getCoords(func, range(*RANGE_BORDERS), EXP, refactorDataForEval(self.vars, self.funcs))
             # Error checking
             if log["fatalError"]:
                 throwError(log["fatalError"])
@@ -392,6 +388,7 @@ class Controller:
     def plotFunc(self, coords: list[tuple[float, float]], colorRgb: int):
         canvas = self.win.canvasL.pixmap()
         self.painter.begin(canvas)
+        self.painter.setRenderHint(QPainter.RenderHint.Antialiasing)  # Вроде с этим чуть ровнее
         self.pen.setColor(QColor(colorRgb))
         self.pen.setWidth(POINT_WIDTH)
         self.painter.setPen(self.pen)
